@@ -183,11 +183,13 @@ namespace Texture_Atlas_Generator
             int leftOffset = Convert.ToInt32(textBox_LeftOffset.Text);
             int topOffset = Convert.ToInt32(textBox_TopOffset.Text);
 
+            int count = 0;
+
             for (int y = 0; y < (canvas_SpriteSheet.Height / (spriteHeight + paddingHeight + topOffset)) + 2; y++)
             {
                 for (int x = 0; x < (canvas_SpriteSheet.Width / (spriteWidth + paddingWidth + leftOffset)) + 1; x++)
                 {
-                    SpriteInfo spriteTag = new SpriteInfo("Moo " + (x*y), x+y);
+                    SpriteInfo spriteTag = new SpriteInfo("sprite_" + count, 0);
                     Rectangle rectangle = new Rectangle();
                     rectangle.Width = spriteWidth;
                     rectangle.Height = spriteHeight;
@@ -197,6 +199,7 @@ namespace Texture_Atlas_Generator
                     Canvas.SetTop(rectangle, topOffset + (paddingHeight * y) + (spriteHeight * y));
                     Canvas.SetLeft(rectangle, leftOffset + (paddingWidth * x) + (spriteWidth * x));
                     canvas_SpriteSheet.Children.Add(rectangle);
+                    count++;
                 }
             }
         }
