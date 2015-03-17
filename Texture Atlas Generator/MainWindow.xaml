@@ -15,9 +15,12 @@
             </MenuItem>
         </Menu>
         <ScrollViewer Name="scrollViewer_SpriteSheet" HorizontalAlignment="Stretch" Margin="0,20,96,0" VerticalAlignment="Stretch" HorizontalScrollBarVisibility="Auto">
-            <Grid MouseLeftButtonDown="SpriteSheetGrid_MouseLeftButtonDown" x:Name="spriteGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Background="White">
+            <Grid MouseDown="spriteGrid_MouseDown" MouseUp="spriteGrid_MouseUp" MouseMove="spriteGrid_MouseMove" x:Name="spriteGrid" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" Background="White">
                 <Canvas Name="canvas_SpriteSheet" HorizontalAlignment="Left" VerticalAlignment="Top" Width="100" Height="100">
                     <Image Name="image_SpriteSheet" HorizontalAlignment="Left" VerticalAlignment="Stretch" Stretch="None"/>
+                </Canvas>
+                <Canvas>
+                    <Rectangle x:Name="selectionBox" Visibility="Collapsed" Stroke="Black" StrokeThickness="1"/>
                 </Canvas>
             </Grid>
 

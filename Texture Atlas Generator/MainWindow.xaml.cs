@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.Windows.Markup;
 using System.IO;
 using System.Xml;
+using System.Collections;
 
 namespace Texture_Atlas_Generator
 {
@@ -128,7 +129,10 @@ namespace Texture_Atlas_Generator
     /// </summary>
     public partial class MainWindow : Window
     {
-        Rectangle selectedElement;
+        bool mouseDown = false; // Set to 'true' when mouse is held down.
+        Point mouseDownPos; // The point where the mouse button was clicked down.
+
+        ArrayList selectedElements = new ArrayList(); // The selected sprite box
 
         public MainWindow()
         {
@@ -204,35 +208,104 @@ namespace Texture_Atlas_Generator
             }
         }
 
-        private void SpriteSheetGrid_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void spriteGrid_MouseDown(object sender, MouseButtonEventArgs e)
         {
-            var rectangles = canvas_SpriteSheet.Children.OfType<Rectangle>();
+            // Capture and track the mouse.
+            mouseDown = true;
+            mouseDownPos = e.GetPosition(canvas_SpriteSheet);
+            spriteGrid.CaptureMouse();
 
-            if (selectedElement != null)
+            // Initial placement of the drag selection box.         
+            Canvas.SetLeft(selectionBox, mouseDownPos.X);
+            Canvas.SetTop(selectionBox, mouseDownPos.Y);
+            selectionBox.Width = 0;
+            selectionBox.Height = 0;
+
+            // Make the drag selection box visible.
+            selectionBox.Visibility = Visibility.Visible;
+        }
+
+        private void spriteGrid_MouseUp(object sender, MouseButtonEventArgs e)
+        {
+            // Release the mouse capture and stop tracking it.
+            mouseDown = false;
+            spriteGrid.ReleaseMouseCapture();
+
+            // Hide the drag selection box.
+            selectionBox.Visibility = Visibility.Collapsed;
+
+            Point mouseUpPos = e.GetPosition(canvas_SpriteSheet);
+
+            // Reset the currently selected objects before setting the new ones
+            foreach (Rectangle rect in selectedElements)
             {
-                selectedElement.Fill = Brushes.Red;
-                selectedElement = null;
-                textBox_SelectedName.Text = "";
+                rect.Fill = Brushes.Red;
             }
+
+            selectedElements.Clear();
+
+            var rectangles = canvas_SpriteSheet.Children.OfType<Rectangle>();
+            System.Windows.Rect bounds = new System.Windows.Rect(mouseDownPos, mouseUpPos);
 
             foreach (Rectangle rect in rectangles)
             {
-                if(rect.IsMouseOver)
+                System.Windows.Rect rectBounds = new System.Windows.Rect(
+                    Canvas.GetLeft(rect), Canvas.GetTop(rect), rect.Width, rect.Height);
+                if (bounds.IntersectsWith(rectBounds))
                 {
-                    selectedElement = rect;
-                    selectedElement.Fill = Brushes.Green;
-                    SpriteInfo info = (SpriteInfo)rect.Tag;
-                    textBox_SelectedName.Text = info.Name;
-                    break;
+                    rect.Fill = Brushes.Green;
+                    selectedElements.Add(rect);
+                }
+            }
+
+            if (selectedElements.Count == 1)
+            {
+                Rectangle rect = (Rectangle)selectedElements[0];
+                SpriteInfo info = (SpriteInfo)rect.Tag;
+                textBox_SelectedName.Text = info.Name;
+            }
+        }
+
+        private void spriteGrid_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (mouseDown)
+            {
+                // When the mouse is held down, reposition the drag selection box.
+
+                Point mousePos = e.GetPosition(spriteGrid);
+
+                if (mouseDownPos.X < mousePos.X)
+                {
+                    Canvas.SetLeft(selectionBox, mouseDownPos.X);
+                    selectionBox.Width = mousePos.X - mouseDownPos.X;
+                }
+                else
+                {
+                    Canvas.SetLeft(selectionBox, mousePos.X);
+                    selectionBox.Width = mouseDownPos.X - mousePos.X;
+                }
+
+                if (mouseDownPos.Y < mousePos.Y)
+                {
+                    Canvas.SetTop(selectionBox, mouseDownPos.Y);
+                    selectionBox.Height = mousePos.Y - mouseDownPos.Y;
+                }
+                else
+                {
+                    Canvas.SetTop(selectionBox, mousePos.Y);
+                    selectionBox.Height = mouseDownPos.Y - mousePos.Y;
                 }
             }
         }
 
         private void buttonClick_DeleteSelected(object sender, RoutedEventArgs e)
         {
-            canvas_SpriteSheet.Children.Remove(selectedElement);
+            foreach (Rectangle rect in selectedElements)
+            {
+                canvas_SpriteSheet.Children.Remove(rect);
+            }
             textBox_SelectedName.Text = "";
-            selectedElement = null;
+            selectedElements.Clear();
         }
 
         private void FileMenu_ExportTA_Click(object sender, RoutedEventArgs e)
@@ -271,18 +344,21 @@ namespace Texture_Atlas_Generator
 
         private void selectedName_KeyUp(object sender, KeyEventArgs e)
         {
-            SpriteInfo info = (SpriteInfo)selectedElement.Tag;
-            info.Name = textBox_SelectedName.Text;
+            foreach (Rectangle rect in selectedElements)
+            {
+                SpriteInfo info = (SpriteInfo)rect.Tag;
+                info.Name = textBox_SelectedName.Text;
+            }
         }
 
         private void FileMenu_SaveProject_Click(object sender, RoutedEventArgs e)
         {
-            if(selectedElement != null)
+            foreach (Rectangle rect in selectedElements)
             {
-                selectedElement.Fill = Brushes.Red;
-                selectedElement = null;
+                rect.Fill = Brushes.Red;
                 textBox_SelectedName.Text = "";
             }
+            selectedElements.Clear();
 
             System.Windows.Forms.SaveFileDialog saveFileDialog = new System.Windows.Forms.SaveFileDialog();
 
@@ -301,6 +377,7 @@ namespace Texture_Atlas_Generator
 
         private void FileMenu_LoadProject_Click(object sender, RoutedEventArgs e)
         {
+            // TODO: Check if the png doesn't exist anymore and throw error
             System.Windows.Forms.OpenFileDialog openFileDialog = new System.Windows.Forms.OpenFileDialog();
 
             openFileDialog.Filter = "xml files (*.xml)|*.xml|All files (*.*)|*.*";
@@ -325,11 +402,14 @@ namespace Texture_Atlas_Generator
 
         private void window_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key == Key.Delete && (selectedElement != null))
+            if (e.Key == Key.Delete && (selectedElements.Count != 0))
             {
-                canvas_SpriteSheet.Children.Remove(selectedElement);
+                foreach (Rectangle rect in selectedElements)
+                {
+                    canvas_SpriteSheet.Children.Remove(rect);
+                }
                 textBox_SelectedName.Text = "";
-                selectedElement = null;
+                selectedElements.Clear();
             }
         }
     }
